@@ -21,13 +21,15 @@
 
 ## Why this skill
 
-Saving a paper is easy; saving it with dependable metadata, a verified PDF, useful workflow tags, and the correct collection is harder. This skill gives Codex a repeatable workflow for doing that through Zotero's local Connector server.
+This skill grew out of a practical research-workflow gap. ChatGPT and Codex can help survey a topic and identify a useful set of papers. They can also control Chrome to open those papers, but they cannot flexibly invoke the Zotero Connector browser extension to save the results into the right Zotero collection.
+
+This skill bridges that gap through Zotero's local Connector server. It does more than download a PDF: it creates a structured Zotero item with dependable metadata, preserves information such as arXiv `Comments` in child notes, adds research-workflow tags, stores the PDF, and verifies the final item and attachment.
 
 | Without a structured workflow | With this skill |
 | --- | --- |
 | Items can land in the wrong collection | The exact target is resolved and revalidated before every write |
 | A successful request may still leave no usable PDF | The stored attachment is independently downloaded and verified |
-| arXiv comments and reading state are easy to lose | Notes and opt-in Ethereal Style tags are applied consistently |
+| Comments, notes, and reading state are easy to lose | Child notes and Ethereal Style-compatible tags are applied consistently |
 | Batch work can be difficult to resume safely | A manifest, ledger, and lock make serial imports resumable |
 | Duplicate handling may be destructive or opaque | Possible duplicates are reported; nothing is deleted, merged, or replaced |
 
@@ -46,7 +48,7 @@ flowchart LR
 
 - Imports one paper or a batch into an exact Zotero collection.
 - Preserves complete metadata and arXiv Comments as child notes.
-- Supports Ethereal Style workflow tags without guessing priority.
+- Integrates with the Ethereal Style Zotero plugin by producing its `#status/...` and `#priority/...` workflow tags, without guessing priority.
 - Verifies both collection membership and the locally stored PDF.
 - Reports possible duplicates while honoring an explicit request to create a new item.
 - Uses resumable batch ledgers and per-manifest locking.
@@ -62,6 +64,7 @@ flowchart LR
 | Python | Python 3.10 or newer; no third-party packages required |
 | Zotero | Zotero desktop must be running |
 | Local API | In Zotero settings, enable **Allow other applications on this computer to communicate with Zotero** |
+| Ethereal Style | Recommended companion Zotero plugin for using the generated `#status/...` and `#priority/...` tags as a research workflow |
 | PDF access | You must already have legitimate access to the PDF |
 
 ### 2. Install the skill
@@ -136,6 +139,8 @@ use the browser session only to obtain the PDF, and do not export cookies or ses
 The skill does not bypass paywalls, CAPTCHAs, or access controls.
 
 ## Workflow tags
+
+This skill is designed to work with the [Ethereal Style](https://github.com/MuiseDestiny/zotero-style) Zotero plugin. The skill writes ordinary Zotero tags in the naming convention Ethereal Style recognizes; the plugin can then use those tags in its reading-status and priority workflow. Zotero can store the tags without the plugin, but install Ethereal Style to get the intended integrated workflow.
 
 | Requested state | Zotero tag |
 | --- | --- |
