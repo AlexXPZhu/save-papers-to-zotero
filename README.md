@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="save-papers-to-zotero/assets/icon.png" alt="Save Papers to Zotero icon" width="180">
+
 # Save Papers to Zotero
 
 **A safety-first Codex skill for importing research papers into the exact Zotero collection you choose.**
