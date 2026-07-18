@@ -21,13 +21,15 @@
 
 ## 为什么需要这个技能
 
-保存一篇论文并不难；难的是同时获得可靠的元数据、经过验证的 PDF、实用的工作流标签，并确保论文进入正确的集合。本技能通过 Zotero 本地 Connector 服务，为 Codex 提供一套可重复执行的流程。
+这个技能源于科研调研中的一个实际断点：ChatGPT 和 Codex 可以帮助研究者围绕一个主题找到一系列有价值的论文，也可以控制 Chrome 打开相应的文章，但无法灵活调用 Zotero Connector 浏览器扩展，把调研结果保存到正确的 Zotero 集合中。
+
+本技能通过 Zotero 本地 Connector 服务补上了这个缺口。它不只是下载 PDF，还会创建结构化的 Zotero 条目，保存可靠的元数据，将 arXiv `Comments` 等信息保留为子笔记，添加科研工作流标签，存储 PDF，并最终验证条目和附件是否确实保存成功。
 
 | 没有结构化流程时 | 使用本技能后 |
 | --- | --- |
 | 条目可能进入错误的集合 | 每次写入前都会解析并再次核验准确目标 |
 | 请求成功但可能没有可用的 PDF | 会独立下载并验证已存储的附件 |
-| arXiv Comments 和阅读状态容易丢失 | 统一添加子笔记和可选的 Ethereal Style 标签 |
+| Comments、笔记和阅读状态容易丢失 | 统一添加子笔记和兼容 Ethereal Style 的标签 |
 | 批量任务中断后难以安全恢复 | 清单、账本和锁使串行导入可恢复 |
 | 重复条目的处理可能具有破坏性或不透明 | 只报告可能重复项，不删除、合并或替换任何现有条目 |
 
@@ -46,7 +48,7 @@ flowchart LR
 
 - 将单篇论文或一批论文导入准确的 Zotero 集合。
 - 保留完整元数据，并将 arXiv Comments 保存为子笔记。
-- 支持 Ethereal Style 工作流标签，但不会自行猜测优先级。
+- 与 Ethereal Style Zotero 插件集成，生成其使用的 `#status/...` 和 `#priority/...` 工作流标签，但不会自行猜测优先级。
 - 同时验证集合归属和本地存储的 PDF。
 - 报告可能重复项，同时执行用户明确要求的新建操作。
 - 使用可恢复的批量账本和逐清单锁。
@@ -62,6 +64,7 @@ flowchart LR
 | Python | Python 3.10 或更高版本；无需第三方包 |
 | Zotero | Zotero 桌面版必须正在运行 |
 | 本地 API | 在 Zotero 设置中启用 **允许此计算机上的其他应用程序与 Zotero 通信** |
+| Ethereal Style | 推荐配套使用的 Zotero 插件，可将生成的 `#status/...` 和 `#priority/...` 标签用于科研工作流 |
 | PDF 访问权限 | 你必须已经拥有合法的 PDF 访问权限 |
 
 ### 2. 安装技能
@@ -136,6 +139,8 @@ $CODEX_HOME/skills/save-papers-to-zotero
 本技能不会绕过付费墙、CAPTCHA 或任何访问控制。
 
 ## 工作流标签
+
+本技能旨在与 [Ethereal Style](https://github.com/MuiseDestiny/zotero-style) Zotero 插件配套使用。技能会写入普通的 Zotero 标签，并采用 Ethereal Style 能识别的命名约定；随后插件可以将这些标签用于阅读状态和优先级工作流。即使没有安装插件，Zotero 也能保存这些标签，但安装 Ethereal Style 才能获得预期的完整集成体验。
 
 | 请求的状态 | Zotero 标签 |
 | --- | --- |
