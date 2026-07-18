@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="save-papers-to-zotero/assets/icon.png" alt="保存论文到 Zotero 图标" width="180">
+
 # 保存论文到 Zotero
 
 **一个安全优先的 Codex 技能，可将研究论文导入你指定的准确 Zotero 集合。**
