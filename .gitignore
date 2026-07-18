@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+
+# Private paper inputs and importer outputs
+local-data/
+downloads/
+*.pdf
+*.zotero-results.jsonl
+*.zotero-results.jsonl.lock
+results.jsonl
+results.jsonl.lock
+summary.json
+papers.json
+papers-*.json
+
+# Editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

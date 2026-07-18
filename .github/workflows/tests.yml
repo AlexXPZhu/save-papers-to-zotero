@@ -1,0 +1,31 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.12"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run tests
+        run: python -X utf8 tests/test_importers.py -v
