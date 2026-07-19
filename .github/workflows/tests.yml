@@ -28,4 +28,19 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Run tests
-        run: python -X utf8 tests/test_importers.py -v
+        run: python -X utf8 -m unittest discover -s tests -v
+
+  claude-plugin-validation:
+    name: Claude Code plugin validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Claude Code 2.1.211
+        run: curl -fsSL https://claude.ai/install.sh | bash -s 2.1.211
+
+      - name: Validate marketplace and plugin
+        run: ~/.local/bin/claude plugin validate .

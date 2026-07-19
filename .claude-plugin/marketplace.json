@@ -1,0 +1,30 @@
+{
+  "name": "save-papers-to-zotero",
+  "owner": {
+    "name": "AlexXPZhu"
+  },
+  "plugins": [
+    {
+      "name": "save-papers-to-zotero",
+      "source": "./save-papers-to-zotero",
+      "description": "Import papers into an exact Zotero collection with verified stored PDFs, safe duplicate reporting, and resumable batches.",
+      "author": {
+        "name": "AlexXPZhu"
+      },
+      "homepage": "https://github.com/AlexXPZhu/save-papers-to-zotero",
+      "repository": "https://github.com/AlexXPZhu/save-papers-to-zotero",
+      "license": "MIT",
+      "category": "productivity",
+      "keywords": [
+        "zotero",
+        "research",
+        "papers",
+        "pdf"
+      ],
+      "strict": false,
+      "skills": [
+        "./"
+      ]
+    }
+  ]
+}

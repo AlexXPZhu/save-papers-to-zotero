@@ -4,12 +4,13 @@
 
 # 保存论文到 Zotero
 
-**一个安全优先的 Codex 技能，可将研究论文导入你指定的准确 Zotero 集合。**
+**一个安全优先的 Codex 与 Claude Code 技能，可将研究论文导入你指定的准确 Zotero 集合。**
 
 [![Tests](https://github.com/AlexXPZhu/save-papers-to-zotero/actions/workflows/tests.yml/badge.svg)](https://github.com/AlexXPZhu/save-papers-to-zotero/actions/workflows/tests.yml)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Codex Skill](https://img.shields.io/badge/Codex-Skill-111827)](save-papers-to-zotero/)
+[![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-D97757)](save-papers-to-zotero/)
 [![Zotero](https://img.shields.io/badge/Zotero-Local%20Connector-CC2936?logo=zotero&logoColor=white)](https://www.zotero.org/)
 
 [English](README.md) · [简体中文](README.zh-CN.md)
@@ -19,11 +20,11 @@
 </div>
 
 > [!NOTE]
-> 这是一个独立的社区项目，与 Zotero 或 OpenAI 无隶属关系，也未获得其官方背书。
+> 这是一个独立的社区项目，与 Zotero、OpenAI 或 Anthropic 无隶属关系，也未获得其官方背书。
 
 ## 为什么需要这个技能
 
-这个技能源于科研调研中的一个实际断点：ChatGPT 和 Codex 可以帮助研究者围绕一个主题找到一系列有价值的论文，也可以控制 Chrome 打开相应的文章，但是却无法将相应的PDF文件保存到你的Zotero文库中。它会提示你Chrome控制无法使用connector插件。
+这个技能源于科研调研中的一个实际断点：ChatGPT、Codex 和 Claude Code 可以帮助研究者围绕主题找到有价值的论文，也可以控制 Chrome 打开文章，但调用 Zotero Connector 浏览器扩展并不能提供可验证、可重复且能准确进入目标集合的导入流程。
 
 本技能通过 Zotero 本地 Connector 服务补上了这个缺口。某种程度上，它使得你可以直接在和ChatGPT聊天的过程中就把Zotero Connector的活干了。它不只是下载 PDF，还会创建结构化的 Zotero 条目，保存可靠的元数据，将 arXiv `Comments` 等信息保留为子笔记，添加科研工作流标签，存储 PDF，并最终验证条目和附件是否确实保存成功。
 
@@ -52,14 +53,17 @@
 
 | 要求 | 说明 |
 | --- | --- |
-| Codex | 支持技能的 Codex 环境 |
+| 智能体 | 支持技能的 Codex，或 Claude Code 2.1.211 及以上版本 |
+| Claude 浏览器访问 | 可选：Claude in Chrome 扩展 1.0.36 及以上版本，并使用 Anthropic 直连方案 |
 | Python | Python 3.10 或更高版本；无需第三方包 |
 | Zotero | Zotero 桌面版必须正在运行 |
 | 本地 API | 在 Zotero 设置中启用 **允许此计算机上的其他应用程序与 Zotero 通信** |
 | Ethereal Style | 推荐配套使用的 Zotero 插件，可将生成的 `#status/...` 和 `#priority/...` 标签用于科研工作流 |
 | PDF 访问权限 | 你必须已经拥有合法的 PDF 访问权限 |
 
-### 2. 安装技能
+### 2. 为 Codex 或 Claude Code 安装
+
+#### Codex
 
 最简单的方法是让内置的 `$skill-installer` 直接从 GitHub 安装：
 
@@ -83,16 +87,31 @@ $CODEX_HOME/skills/save-papers-to-zotero
 
 </details>
 
+#### Claude Code
+
+先将本仓库添加为 marketplace，再安装插件：
+
+```text
+/plugin marketplace add AlexXPZhu/save-papers-to-zotero
+/plugin install save-papers-to-zotero@save-papers-to-zotero
+```
+
+Claude Code 可以自动调用该技能，也可以通过 `/save-papers-to-zotero:save-papers-to-zotero` 显式调用。需要获取仓库更新时运行：
+
+```text
+/plugin marketplace update save-papers-to-zotero
+/plugin update save-papers-to-zotero@save-papers-to-zotero
+```
+
+卸载时运行 `/plugin uninstall save-papers-to-zotero@save-papers-to-zotero`。
+
 ### 3. 准备 Zotero
 
 1. 启动 Zotero 桌面版。
 2. 创建或确定目标集合。
 3. 在请求中使用集合的准确名称。如果名称存在歧义，请使用 `--target-id` 提供集合键。
 
-### 4. 让 Codex 导入论文
-
-
-直接和ChatGPT聊天，告诉他使用这个skill。
+### 4. 让 Codex 或 Claude Code 导入论文
 
 ```text
 把 https://arxiv.org/abs/1706.03762 保存到我的 Zotero 集合“待读论文”。
@@ -132,6 +151,8 @@ $CODEX_HOME/skills/save-papers-to-zotero
 ```
 
 本技能不会绕过付费墙、CAPTCHA 或任何访问控制。
+
+在 Claude Code 中，使用 `claude --chrome` 启动 CLI，或通过 `/chrome` 默认启用浏览器集成。浏览器会将有权访问的 PDF 下载到临时本地文件，再由导入器通过 `--pdf-file` 接收。如果 Chrome 不可用或下载失败，流程会在写入前停止，并要求你提供合法取得的本地 PDF。
 
 ## 工作流标签
 
@@ -181,28 +202,33 @@ $CODEX_HOME/skills/save-papers-to-zotero
 | `target_ambiguous` | 使用 `--target-id` 提供目标集合键 |
 | `invalid_pdf` | 确保来源是当前访问环境可直接获取的有效 PDF |
 | `verification_failed` | 条目可能已经创建；不要盲目重试，请先检查 Zotero |
+| Claude 浏览器不可用 | 使用 `claude --chrome` 启动并检查 `/chrome`；登录态浏览器获取要求 Anthropic 直连方案 |
+| 浏览器下载失败 | 自行下载有权访问的 PDF 并提供本地路径；技能不会切换到不可信镜像 |
 
 ## 兼容性与测试
 
-测试套件使用模拟 Zotero 服务，覆盖元数据、附件、验证、重复项和可恢复批量行为。GitHub Actions 会在 Windows、Linux 和 macOS 上使用 Python 3.10 与 3.12 运行测试。
+测试套件使用模拟 Zotero 服务，覆盖元数据、附件、验证、重复项、可恢复批量行为和双平台打包。GitHub Actions 会在 Windows、Linux 和 macOS 上使用 Python 3.10 与 3.12 运行测试，并使用 Claude Code 2.1.211 校验 Claude marketplace。
 
 当前版本也已于 2026 年 7 月 18 日在 Zotero 9.0.6 和 Connector API v3 上完成实际验证。
 
 ```powershell
-python -X utf8 tests/test_importers.py -v
+python -X utf8 -m unittest discover -s tests -v
 ```
 
 ## 仓库结构
 
 ```text
 save-papers-to-zotero/
+├── .claude-plugin/marketplace.json
 ├── .github/workflows/tests.yml
 ├── save-papers-to-zotero/
 │   ├── SKILL.md
 │   ├── agents/openai.yaml
 │   ├── references/batch-manifest.md
 │   └── scripts/
-├── tests/test_importers.py
+├── tests/
+│   ├── test_importers.py
+│   └── test_skill_packaging.py
 ├── README.md
 ├── README.zh-CN.md
 └── LICENSE
@@ -211,6 +237,8 @@ save-papers-to-zotero/
 ## 开发与隐私
 
 欢迎提交贡献和具体的问题报告。请将真实 PDF、清单、账本和其他私密研究数据放在仓库之外，或放入已忽略的 `local-data/` 目录。导入流程通过 Zotero 的本地回环 Connector 服务通信，且不应持久化浏览器 Cookie 或会话存储。
+
+若要从仓库检出目录直接测试 Claude 插件，请运行 `claude --plugin-dir ./save-papers-to-zotero --chrome`；修改插件文件后使用 `/reload-plugins`。发布前从仓库根目录运行 `claude plugin validate .`。
 
 ## 许可证
 

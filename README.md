@@ -4,12 +4,13 @@
 
 # Save Papers to Zotero
 
-**A safety-first Codex skill for importing research papers into the exact Zotero collection you choose.**
+**A safety-first Codex and Claude Code skill for importing research papers into the exact Zotero collection you choose.**
 
 [![Tests](https://github.com/AlexXPZhu/save-papers-to-zotero/actions/workflows/tests.yml/badge.svg)](https://github.com/AlexXPZhu/save-papers-to-zotero/actions/workflows/tests.yml)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Codex Skill](https://img.shields.io/badge/Codex-Skill-111827)](save-papers-to-zotero/)
+[![Claude Code Skill](https://img.shields.io/badge/Claude%20Code-Skill-D97757)](save-papers-to-zotero/)
 [![Zotero](https://img.shields.io/badge/Zotero-Local%20Connector-CC2936?logo=zotero&logoColor=white)](https://www.zotero.org/)
 
 [English](README.md) · [简体中文](README.zh-CN.md)
@@ -19,11 +20,11 @@
 </div>
 
 > [!NOTE]
-> This is an independent community project. It is not affiliated with or endorsed by Zotero or OpenAI.
+> This is an independent community project. It is not affiliated with or endorsed by Zotero, OpenAI, or Anthropic.
 
 ## Why this skill
 
-This skill grew out of a practical research-workflow gap. ChatGPT and Codex can help survey a topic and identify a useful set of papers. They can also control Chrome to open those papers, but they cannot flexibly invoke the Zotero Connector browser extension to save the results into the right Zotero collection.
+This skill grew out of a practical research-workflow gap. ChatGPT, Codex, and Claude Code can help survey a topic and identify useful papers. They can also control Chrome to open those papers, but invoking the Zotero Connector browser extension does not provide a dependable, verifiable import into the right collection.
 
 This skill bridges that gap through Zotero's local Connector server. It does more than download a PDF: it creates a structured Zotero item with dependable metadata, preserves information such as arXiv `Comments` in child notes, adds research-workflow tags, stores the PDF, and verifies the final item and attachment.
 
@@ -62,14 +63,17 @@ flowchart LR
 
 | Requirement | Details |
 | --- | --- |
-| Codex | A Codex environment that supports skills |
+| Agent | Codex with skills, or Claude Code 2.1.211 or newer |
+| Claude browser access | Optional: Claude in Chrome extension 1.0.36 or newer and a direct Anthropic plan |
 | Python | Python 3.10 or newer; no third-party packages required |
 | Zotero | Zotero desktop must be running |
 | Local API | In Zotero settings, enable **Allow other applications on this computer to communicate with Zotero** |
 | Ethereal Style | Recommended companion Zotero plugin for using the generated `#status/...` and `#priority/...` tags as a research workflow |
 | PDF access | You must already have legitimate access to the PDF |
 
-### 2. Install the skill
+### 2. Install for Codex or Claude Code
+
+#### Codex
 
 The easiest method is to ask the built-in `$skill-installer` to install the skill directly from GitHub:
 
@@ -93,13 +97,31 @@ If `CODEX_HOME` is not set, the default location is `~/.codex/skills/save-papers
 
 </details>
 
+#### Claude Code
+
+Add this repository as a marketplace, then install the plugin:
+
+```text
+/plugin marketplace add AlexXPZhu/save-papers-to-zotero
+/plugin install save-papers-to-zotero@save-papers-to-zotero
+```
+
+Claude Code can invoke the skill automatically, or you can invoke it explicitly with `/save-papers-to-zotero:save-papers-to-zotero`. To receive repository updates, run:
+
+```text
+/plugin marketplace update save-papers-to-zotero
+/plugin update save-papers-to-zotero@save-papers-to-zotero
+```
+
+To uninstall it, run `/plugin uninstall save-papers-to-zotero@save-papers-to-zotero`.
+
 ### 3. Prepare Zotero
 
 1. Start Zotero desktop.
 2. Create or identify the destination collection.
 3. Use its exact name in your request. If names are ambiguous, supply the collection key with `--target-id`.
 
-### 4. Ask Codex to import a paper
+### 4. Ask Codex or Claude Code to import a paper
 
 ```text
 Save https://arxiv.org/abs/1706.03762 to my Zotero collection "Reading Queue".
@@ -139,6 +161,8 @@ use the browser session only to obtain the PDF, and do not export cookies or ses
 ```
 
 The skill does not bypass paywalls, CAPTCHAs, or access controls.
+
+In Claude Code, launch the CLI with `claude --chrome` or enable Chrome by default with `/chrome`. The browser integration downloads the authorized PDF to a temporary local file; the importer then receives it through `--pdf-file`. If Chrome is unavailable or the download fails, the workflow stops before writing and asks you for a legitimate local PDF.
 
 ## Workflow tags
 
@@ -188,28 +212,33 @@ Every script emits structured JSON so a caller can distinguish success, skips, p
 | `target_ambiguous` | Supply the intended collection key with `--target-id` |
 | `invalid_pdf` | Make sure the source is a direct, valid PDF available to your current access context |
 | `verification_failed` | The item may already have been created; inspect Zotero instead of blindly retrying |
+| Claude browser is unavailable | Launch with `claude --chrome`, then check `/chrome`; authenticated browser retrieval requires a direct Anthropic plan |
+| Browser download failed | Download the legitimately accessible PDF yourself and provide its local path; the skill does not switch to an untrusted mirror |
 
 ## Compatibility and tests
 
-The test suite uses a fake Zotero server and covers metadata, attachments, verification, duplicates, and resumable batch behavior. GitHub Actions runs it on Python 3.10 and 3.12 across Windows, Linux, and macOS.
+The test suite uses a fake Zotero server and covers metadata, attachments, verification, duplicates, resumable batch behavior, and dual-platform packaging. GitHub Actions runs it on Python 3.10 and 3.12 across Windows, Linux, and macOS, and validates the Claude marketplace with Claude Code 2.1.211.
 
 The current release was also exercised against Zotero 9.0.6 and Connector API v3 on July 18, 2026.
 
 ```powershell
-python -X utf8 tests/test_importers.py -v
+python -X utf8 -m unittest discover -s tests -v
 ```
 
 ## Repository layout
 
 ```text
 save-papers-to-zotero/
+├── .claude-plugin/marketplace.json
 ├── .github/workflows/tests.yml
 ├── save-papers-to-zotero/
 │   ├── SKILL.md
 │   ├── agents/openai.yaml
 │   ├── references/batch-manifest.md
 │   └── scripts/
-├── tests/test_importers.py
+├── tests/
+│   ├── test_importers.py
+│   └── test_skill_packaging.py
 ├── README.md
 ├── README.zh-CN.md
 └── LICENSE
@@ -218,6 +247,8 @@ save-papers-to-zotero/
 ## Development and privacy
 
 Contributions and focused bug reports are welcome. Keep real PDFs, manifests, ledgers, and other private research data outside the repository or under the ignored `local-data/` directory. The import workflow communicates with Zotero over its loopback Connector server and should never persist browser cookies or session storage.
+
+To test the Claude plugin directly from a checkout, run `claude --plugin-dir ./save-papers-to-zotero --chrome`, then use `/reload-plugins` after changing plugin files. Run `claude plugin validate .` from the repository root before publishing.
 
 ## License
 

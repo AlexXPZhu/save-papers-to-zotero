@@ -697,7 +697,7 @@ def import_item(
         "possible_duplicate_keys": possible_duplicate_keys,
     }
 
-    session_id = "codex-" + uuid.uuid4().hex
+    session_id = "zotero-import-" + uuid.uuid4().hex
     connector_item_id = uuid.uuid4().hex[:8].upper()
     item["id"] = connector_item_id
 

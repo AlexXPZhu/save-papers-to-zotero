@@ -5,13 +5,17 @@ description: Import one paper or a batch into an exact Zotero collection through
 
 # Save Papers to Zotero
 
-Complete explicit Zotero import requests through the desktop app's local Connector server on `127.0.0.1:23119`. Do not ask the user to click the Chrome extension. Treat a parent item without a verified stored PDF as incomplete unless the user requests a dry run.
+Complete explicit Zotero import requests through the desktop app's local Connector server on `127.0.0.1:23119`. Do not ask the user to invoke the Zotero Connector browser extension. Treat a parent item without a verified stored PDF as incomplete unless the user requests a dry run.
+
+## Resolve Bundled Paths
+
+Resolve the directory containing this `SKILL.md` before running an importer. In Claude Code, use `${CLAUDE_SKILL_DIR}`. In Codex, use the installed skill directory supplied with the loaded skill. Replace `<skill-dir>` below with that absolute directory, quote the resulting script path, and never assume that the current working directory is the skill directory. Use an available Python 3.10+ executable; the examples use `python`.
 
 ## Choose the Importer
 
-- Use `scripts/zotero_connector_import.py` for one paper.
-- Use `scripts/zotero_batch_import.py` for two or more papers, a DOI/article list, or literature-review output.
-- Read `references/batch-manifest.md` before preparing a batch manifest.
+- Use `<skill-dir>/scripts/zotero_connector_import.py` for one paper.
+- Use `<skill-dir>/scripts/zotero_batch_import.py` for two or more papers, a DOI/article list, or literature-review output.
+- Read `<skill-dir>/references/batch-manifest.md` before preparing a batch manifest.
 
 Both importers:
 
@@ -59,16 +63,18 @@ Use a Zotero translator-style item object:
 Obtain each PDF in one of two ways:
 
 - Pass a public direct PDF URL and its landing page as the referrer.
-- For a PDF available only in the user's signed-in Chrome session, use the Chrome-control skill to download the visible legitimate PDF to a temporary file, then pass that file. Never inspect cookies or session storage.
+- For a PDF available only in the user's signed-in Chrome session, use the host's browser integration: use the Chrome-control skill in Codex, or Claude in Chrome from a Claude Code session launched with `claude --chrome` (or with Chrome enabled by default). Download the visible legitimate PDF to a temporary file, then pass that file with `--pdf-file`. Never inspect, export, or persist cookies or session storage.
 
-Do not bypass paywalls, CAPTCHAs, access controls, or licensing restrictions. Do not use untrusted mirrors.
+If the browser integration is unavailable, permission is denied, or the download does not produce a local valid PDF, stop before the Zotero write and ask the user to provide a legitimately obtained local PDF. Do not fall back to an untrusted mirror.
+
+Do not bypass paywalls, CAPTCHAs, access controls, or licensing restrictions.
 
 ## Import One Paper
 
 For a public PDF URL:
 
 ```text
-python -X utf8 scripts/zotero_connector_import.py \
+python -X utf8 "<skill-dir>/scripts/zotero_connector_import.py" \
   --item-json <item.json> \
   --collection <exact collection name> \
   --source-url <landing page URL> \
@@ -85,7 +91,7 @@ Use `--arxiv-comment <text>` for the source's arXiv `Comments` value; the import
 Prepare and validate every manifest entry before starting writes. Then run:
 
 ```text
-python -X utf8 scripts/zotero_batch_import.py \
+python -X utf8 "<skill-dir>/scripts/zotero_batch_import.py" \
   --manifest <papers.json> \
   --collection <exact collection name> \
   --target-id <id> \
