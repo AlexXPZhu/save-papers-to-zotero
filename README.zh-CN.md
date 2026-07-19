@@ -24,7 +24,7 @@
 
 ## 为什么需要这个技能
 
-这个技能源于科研调研中的一个实际断点：ChatGPT、Codex 和 Claude Code 可以帮助研究者围绕主题找到有价值的论文，也可以控制 Chrome 打开文章，但调用 Zotero Connector 浏览器扩展并不能提供可验证、可重复且能准确进入目标集合的导入流程。
+这个技能源于科研调研中的一个实际断点：ChatGPT、Codex 和 Claude Code 可以帮助研究者围绕主题找到有价值的论文，也可以控制 Chrome 打开文章，但无法正常操作Zotero Connector将文章PDF导入文库。
 
 本技能通过 Zotero 本地 Connector 服务补上了这个缺口。某种程度上，它使得你可以直接在和ChatGPT聊天的过程中就把Zotero Connector的活干了。它不只是下载 PDF，还会创建结构化的 Zotero 条目，保存可靠的元数据，将 arXiv `Comments` 等信息保留为子笔记，添加科研工作流标签，存储 PDF，并最终验证条目和附件是否确实保存成功。
 
