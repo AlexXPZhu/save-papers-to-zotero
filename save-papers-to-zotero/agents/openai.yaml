@@ -1,4 +1,4 @@
 interface:
   display_name: "Save Papers to Zotero"
   short_description: "Batch-import papers with verified PDFs"
-  default_prompt: "Use $save-papers-to-zotero to import this paper list with verified PDFs, preserve arXiv Comments, default each new item to #status/to-read, and report possible existing matches."
+  default_prompt: "Use $save-papers-to-zotero to import this paper list with verified PDFs, preserve arXiv Comments, default each new item to #status/to-read, and report possible existing matches. If the user only has DOIs/arXiv IDs or a .bib file, first run the ingest resolver to produce a reviewable manifest, then import it."

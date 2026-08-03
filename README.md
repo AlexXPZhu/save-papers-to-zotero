@@ -50,6 +50,7 @@ flowchart LR
 ## Highlights
 
 - Imports one paper or a batch into an exact Zotero collection.
+- Resolves a list of DOIs/arXiv IDs or a `.bib` file into a reviewable manifest via Crossref and the arXiv API.
 - Preserves complete metadata and arXiv Comments as child notes.
 - Integrates with the Ethereal Style Zotero plugin by producing its `#status/...` and `#priority/...` workflow tags, without guessing priority.
 - Verifies both collection membership and the locally stored PDF.
@@ -146,6 +147,23 @@ Keep a resumable ledger and report possible duplicates without deleting anything
 
 See the [batch manifest reference](save-papers-to-zotero/references/batch-manifest.md) for the schema and resume rules.
 
+### From a list of identifiers
+
+```text
+Resolve ids.txt (DOIs and arXiv ids) into a manifest for "Reading Queue",
+default each paper to to-read, and write an ingest report. Do not write to Zotero yet.
+```
+
+The resolver fetches metadata from Crossref and the arXiv API, preserves arXiv Comments, and writes a manifest you can review. arXiv entries get a derivable PDF; DOI entries are reported as `needs_pdf`. See the [ingest reference](save-papers-to-zotero/references/ingest.md).
+
+### From a BibTeX file
+
+```text
+Resolve refs.bib into a manifest for "Thesis Sources" and tag every paper thesis.
+```
+
+The resolver parses the `.bib` locally, maps entry types and fields to Zotero items, and turns `eprint` + `archivePrefix=arXiv` into an arXiv `pdf_url`.
+
 ### Dry run first
 
 ```text
@@ -235,9 +253,11 @@ save-papers-to-zotero/
 │   ├── SKILL.md
 │   ├── agents/openai.yaml
 │   ├── references/batch-manifest.md
+│   ├── references/ingest.md
 │   └── scripts/
 ├── tests/
 │   ├── test_importers.py
+│   ├── test_ingest.py
 │   └── test_skill_packaging.py
 ├── README.md
 ├── README.zh-CN.md
