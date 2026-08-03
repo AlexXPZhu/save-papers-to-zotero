@@ -16,8 +16,10 @@ class SkillPackagingTests(unittest.TestCase):
             SKILL_FILE,
             SKILL_DIR / "agents" / "openai.yaml",
             SKILL_DIR / "references" / "batch-manifest.md",
+            SKILL_DIR / "references" / "ingest.md",
             SKILL_DIR / "scripts" / "zotero_connector_import.py",
             SKILL_DIR / "scripts" / "zotero_batch_import.py",
+            SKILL_DIR / "scripts" / "zotero_ingest.py",
         ]
         for path in required:
             with self.subTest(path=path):
@@ -32,6 +34,8 @@ class SkillPackagingTests(unittest.TestCase):
         self.assertIn("Chrome-control skill in Codex", skill)
         self.assertIn("Claude in Chrome", skill)
         self.assertIn("<skill-dir>/scripts/zotero_connector_import.py", skill)
+        self.assertIn("<skill-dir>/scripts/zotero_ingest.py", skill)
+        self.assertIn("Ingest from Identifier Lists or BibTeX", skill)
 
     def test_claude_marketplace_exposes_only_the_shared_skill(self) -> None:
         marketplace = json.loads(MARKETPLACE_FILE.read_text(encoding="utf-8"))

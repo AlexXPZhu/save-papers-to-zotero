@@ -14,7 +14,8 @@ Resolve the directory containing this `SKILL.md` before running an importer. In 
 ## Choose the Importer
 
 - Use `<skill-dir>/scripts/zotero_connector_import.py` for one paper.
-- Use `<skill-dir>/scripts/zotero_batch_import.py` for two or more papers, a DOI/article list, or literature-review output.
+- Use `<skill-dir>/scripts/zotero_batch_import.py` for two or more papers, a prepared manifest, or literature-review output.
+- Use `<skill-dir>/scripts/zotero_ingest.py` when you only have a list of DOIs/arXiv IDs or a `.bib` file. It resolves metadata and writes a manifest you review before importing; see [Ingest from Identifier Lists or BibTeX](#ingest-from-identifier-lists-or-bibtex) and `<skill-dir>/references/ingest.md`.
 - Read `<skill-dir>/references/batch-manifest.md` before preparing a batch manifest.
 
 Both importers:
@@ -31,7 +32,7 @@ Never automatically delete, merge, replace, or suppress an item because a possib
 
 ## Prepare Reliable Inputs
 
-Resolve each paper to a canonical landing page. Prefer publisher pages, DOI records, PubMed Central, repositories, or preprint pages that the user may legitimately access. Populate all reliable metadata exposed by the source, including abstract, publication, volume, issue, pages, language, DOI, arXiv identifier, and full creator list. Do not invent missing values.
+Resolve each paper to a canonical landing page. Prefer publisher pages, DOI records, PubMed Central, repositories, or preprint pages that the user may legitimately access. Populate all reliable metadata exposed by the source, including abstract, publication, volume, issue, pages, language, DOI, arXiv identifier, and full creator list. Do not invent missing values. To obtain reliable metadata from a list of DOIs/arXiv IDs or a `.bib` file, use the ingest resolver in [Ingest from Identifier Lists or BibTeX](#ingest-from-identifier-lists-or-bibtex) instead of assembling items by hand.
 
 For an arXiv paper, copy the source's `Comments` field verbatim except for whitespace normalization. Pass only its value; the importer creates a separate child note beginning `Comment: `. Preserve venue, code, project, and publication information contained there. Do not synthesize an arXiv comment from the abstract, citation, or your own analysis, and omit it when the source has no `Comments` field.
 
@@ -106,6 +107,23 @@ The batch importer must remain serial. It revalidates the exact target immediate
 Never parallelize writes or run two processes against the same ledger. The importer uses an operating-system advisory lock. Its `.lock` file may remain on disk after a run or crash; the file alone does not block a future batch.
 
 Batch exit codes are `0` when all requests completed or were safely skipped, `3` when the run finished with incomplete entries, and another nonzero code for a fatal manifest, lock, connection, or collection error. The single importer returns `0` on success and a nonzero code on failure.
+
+## Ingest from Identifier Lists or BibTeX
+
+When you have only a list of DOIs / arXiv IDs or a `.bib` file, resolve them into a manifest first with `<skill-dir>/scripts/zotero_ingest.py`. It fetches metadata from Crossref (DOIs) and the arXiv API (arXiv ids), or parses BibTeX locally, and writes a manifest that `zotero_batch_import.py` consumes. It does not contact Zotero. Read `<skill-dir>/references/ingest.md` for the supported formats, field mappings, and `needs_pdf` handling before using it.
+
+```text
+python -X utf8 "<skill-dir>/scripts/zotero_ingest.py" \
+  --identifiers <ids.txt|-> \
+  --collection "<exact collection name>" \
+  [--out <manifest.json>] [--report <ingest-report.json>] \
+  [--tag <t> ...] [--note <n> ...] \
+  [--reading-status to-read|reading|none] [--priority high|medium|low]
+```
+
+Use `--bibtex <refs.bib>` instead of `--identifiers` for a BibTeX file. `--tag`, `--note`, `--reading-status`, and `--priority` set shared manifest top-level fields; they are not baked into each paper. The resolver reports every identifier it could not resolve and continues; it never drops failures silently. arXiv entries get a derivable `pdf_url`; DOI entries do not, so the summary reports `needs_pdf`.
+
+A mixed manifest where some entries lack a PDF **cannot be imported as-is**: the batch importer requires a PDF for every entry during a real import and raises `invalid_manifest` on the first entry missing one. Review the manifest, run `zotero_batch_import.py --dry-run` to check metadata and duplicates, then either add PDFs for every `needs_pdf` entry (legitimate access only) or trim the manifest to a subset where every entry has a PDF (for example, a pure arXiv manifest) before the real import. `--dry-run` checks metadata and duplicates but does not solve missing PDFs.
 
 ## Interpret Results
 

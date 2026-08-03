@@ -2,6 +2,8 @@
 
 Use this schema with `scripts/zotero_batch_import.py`. The importer accepts either the object form below or a bare array of paper entries. Prefer the object form so the collection and shared tags are explicit.
 
+A manifest conforming to this schema can also be produced by `scripts/zotero_ingest.py` from a list of DOI/arXiv identifiers or a `.bib` file; see [ingest.md](ingest.md). Manifests produced that way carry shared `tags`/`notes`/`reading_status`/`priority` at the top level and only paper-specific derived fields on each entry.
+
 ## Manifest fields
 
 - `collection`: exact Zotero collection name. Optional only when `--collection` is passed.

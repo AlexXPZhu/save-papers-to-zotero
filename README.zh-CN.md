@@ -40,6 +40,7 @@
 ## 功能亮点
 
 - 将单篇论文或一批论文导入准确的 Zotero 集合。
+- 通过 Crossref 和 arXiv API，将 DOI/arXiv ID 列表或 `.bib` 文件解析为可检阅的清单。
 - 保留完整元数据，并将 arXiv Comments 保存为子笔记。
 - 与 Ethereal Style Zotero 插件集成，生成其使用的 `#status/...` 和 `#priority/...` 工作流标签，但不会自行猜测优先级。
 - 同时验证集合归属和本地存储的 PDF。
@@ -136,6 +137,23 @@ Claude Code 可以自动调用该技能，也可以通过 `/save-papers-to-zoter
 
 清单格式和恢复规则请参阅[批量清单参考](save-papers-to-zotero/references/batch-manifest.md)。
 
+### 从标识符列表
+
+```text
+将 ids.txt（DOI 和 arXiv ID）解析为“待读论文”集合的清单，
+每篇默认 to-read，并写出解析报告。暂不写入 Zotero。
+```
+
+解析器从 Crossref 和 arXiv API 获取元数据，保留 arXiv Comments，并写出可检阅的清单。arXiv 条目会得到可推导的 PDF；DOI 条目则被标记为 `needs_pdf`。详见[解析参考](save-papers-to-zotero/references/ingest.md)。
+
+### 从 BibTeX 文件
+
+```text
+将 refs.bib 解析为“论文资料”集合的清单，并给每篇加 thesis 标签。
+```
+
+解析器在本地解析 `.bib`，把条目类型和字段映射为 Zotero 条目，并将 `eprint` + `archivePrefix=arXiv` 转换为 arXiv `pdf_url`。
+
 ### 先执行试运行
 
 ```text
@@ -225,9 +243,11 @@ save-papers-to-zotero/
 │   ├── SKILL.md
 │   ├── agents/openai.yaml
 │   ├── references/batch-manifest.md
+│   ├── references/ingest.md
 │   └── scripts/
 ├── tests/
 │   ├── test_importers.py
+│   ├── test_ingest.py
 │   └── test_skill_packaging.py
 ├── README.md
 ├── README.zh-CN.md

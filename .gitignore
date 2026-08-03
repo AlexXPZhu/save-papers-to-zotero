@@ -18,6 +18,8 @@ downloads/
 *.pdf
 *.zotero-results.jsonl
 *.zotero-results.jsonl.lock
+*.manifest.json
+*.ingest-report.json
 results.jsonl
 results.jsonl.lock
 summary.json
@@ -29,3 +31,7 @@ papers-*.json
 .idea/
 .DS_Store
 Thumbs.db
+
+# Claude Code local state
+.claude/settings.local.json
+.claude/plans/
