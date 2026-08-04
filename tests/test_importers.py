@@ -407,6 +407,15 @@ class SingleImporterTests(unittest.TestCase):
                     single.prepare_context(fake.base_url, "Route A")
                 self.assertEqual(raised.exception.status, "collection_verification_unavailable")
 
+    def test_missing_collection_message_guides_manual_creation(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with FakeZoteroServer(Path(temp)) as fake:
+                with self.assertRaises(single.ImportFailure) as raised:
+                    single.prepare_context(fake.base_url, "Does Not Exist")
+                self.assertEqual(raised.exception.status, "target_not_found")
+                self.assertIn("create this collection manually", raised.exception.message)
+                self.assertIn("cannot create collections", raised.exception.message)
+
     def test_target_is_revalidated_after_download_before_write(self):
         with tempfile.TemporaryDirectory() as temp:
             with FakeZoteroServer(Path(temp)) as fake:

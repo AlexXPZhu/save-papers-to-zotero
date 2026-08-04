@@ -186,7 +186,10 @@ def find_target(base_url: str, collection_name: str, explicit_target_id: str | N
             if normalized(target.get("name", "")) == normalized(collection_name)
         ]
         if not matches:
-            raise ImportFailure("target_not_found", f"No editable Zotero target named {collection_name!r} was found")
+            raise ImportFailure(
+                "target_not_found",
+                f"Collection {collection_name!r} was not found in Zotero. The local Zotero server cannot create collections through its API; create this collection manually in the Zotero app, then rerun the import.",
+            )
         if len(matches) > 1:
             ids = [target.get("id") for target in matches]
             raise ImportFailure(
