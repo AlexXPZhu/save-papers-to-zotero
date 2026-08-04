@@ -30,7 +30,7 @@ python -X utf8 "<skill-dir>/scripts/zotero_ingest.py" \
 ```
 
 - `--identifiers` and `--bibtex` are mutually exclusive and one is required. `--identifiers -` reads from stdin.
-- `--collection` is required and is baked into the manifest top level.
+- `--collection` is required and is baked into the manifest top level. The resolver does not contact Zotero and does not create the collection; it must already exist in Zotero before the later batch import (the local server cannot create collections through its API).
 - `--out` defaults to `<input-stem>.manifest.json` next to the input; stdin input defaults to `ingest.manifest.json`.
 - `--tag`, `--note`, `--reading-status`, and `--priority` set **shared** manifest top-level fields only; they are not baked into each paper. The batch importer merges them with per-paper values.
 - `--mailto` is sent in the Crossref `User-Agent` for the polite pool.

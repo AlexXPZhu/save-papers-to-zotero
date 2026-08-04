@@ -6,7 +6,7 @@ A manifest conforming to this schema can also be produced by `scripts/zotero_ing
 
 ## Manifest fields
 
-- `collection`: exact Zotero collection name. Optional only when `--collection` is passed.
+- `collection`: exact Zotero collection name. Must already exist in Zotero; the local server cannot create collections through its API, so a missing collection fails the import with `target_not_found`. Optional only when `--collection` is passed.
 - `target_id`: optional Connector target ID. Use it only when multiple writable Connector targets share the exact requested collection name; `--target-id` overrides it.
 - `tags`: optional tags added to every paper.
 - `notes`: optional child-note strings added to every paper.

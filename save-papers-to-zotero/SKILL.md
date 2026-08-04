@@ -5,7 +5,7 @@ description: Import one paper or a batch into an exact Zotero collection through
 
 # Save Papers to Zotero
 
-Complete explicit Zotero import requests through the desktop app's local Connector server on `127.0.0.1:23119`. Do not ask the user to invoke the Zotero Connector browser extension. Treat a parent item without a verified stored PDF as incomplete unless the user requests a dry run.
+Complete explicit Zotero import requests through the desktop app's local Connector server on `127.0.0.1:23119`. Do not ask the user to invoke the Zotero Connector browser extension. Treat a parent item without a verified stored PDF as incomplete unless the user requests a dry run. The target collection must already exist in Zotero before you run an importer; the local Connector server cannot create collections through its API, so create one manually in the Zotero app first if it is missing.
 
 ## Resolve Bundled Paths
 
@@ -20,7 +20,7 @@ Resolve the directory containing this `SKILL.md` before running an importer. In 
 
 Both importers:
 
-1. verify Zotero connectivity and the exact target collection;
+1. verify Zotero connectivity and the exact target collection, which must already exist in Zotero (the local server cannot create collections through its API; create it manually in the Zotero app if needed);
 2. identify possible existing matches by DOI, arXiv ID, then normalized title;
 3. report those matches but still create the requested new item;
 4. save translator-style metadata and optional child notes, including arXiv `Comments`;
