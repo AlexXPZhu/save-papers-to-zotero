@@ -45,6 +45,14 @@ class CandidateInspection(TypedDict):
     pdf_verified: bool
 
 
+def configure_utf8_stdio() -> None:
+    """Make CLI JSON output independent of the Windows console code page."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(encoding="utf-8")
+
+
 class ImportResult(TypedDict, total=False):
     status: ImportStatus
     title: str
@@ -810,4 +818,5 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    configure_utf8_stdio()
     sys.exit(main())

@@ -51,6 +51,7 @@ flowchart LR
 
 - Imports one paper or a batch into an exact Zotero collection.
 - Resolves a list of DOIs/arXiv IDs or a `.bib` file into a reviewable manifest via Crossref and the arXiv API.
+- Optionally creates a primarily Chinese, full-text reading guide as a safely rendered and separately verified child note.
 - Preserves complete metadata and arXiv Comments as child notes.
 - Integrates with the Ethereal Style Zotero plugin by producing its `#status/...` and `#priority/...` workflow tags, without guessing priority.
 - Verifies both collection membership and the locally stored PDF.
@@ -71,6 +72,7 @@ flowchart LR
 | Local API | In Zotero settings, enable **Allow other applications on this computer to communicate with Zotero** |
 | Ethereal Style | Recommended companion Zotero plugin for using the generated `#status/...` and `#priority/...` tags as a research workflow |
 | PDF access | You must already have legitimate access to the PDF |
+| Summary support | Uses the current agent's PDF-reading capability and context; OCR is not bundled |
 
 ### 2. Install for Codex or Claude Code
 
@@ -137,6 +139,17 @@ Tag it as to-read and add the arXiv Comments as a child note.
 Import DOI 10.1145/3290605.3300233 into the exact Zotero collection "HCI".
 Save and verify the PDF, and use the reading workflow tag.
 ```
+
+### A Chinese full-text reading guide
+
+```text
+Import this paper into "Reading Queue" with a verified PDF. Also read the full
+paper and add a primarily Chinese note containing an overview, background and
+motivation, core problems addressed, methodology and architecture, results and
+evaluation, and section/paragraph locations I should focus on.
+```
+
+Summaries are generated only when explicitly requested. The skill dry-runs the import before spending context on analysis, uses the current Codex or Claude session to read the PDF, safely renders the model's structured JSON, and verifies the child note separately after import. If the host cannot render the PDF, a confirmed arXiv/ar5iv HTML edition of the same paper may supply the full text; the abstract is never used as a silent substitute. Focus locations use section plus paragraph, equation, table, or figure labels rather than PDF page numbers. A summary failure does not block a valid PDF import. Batches of 1-5 papers are recommended and 10 is the hard per-turn maximum; full-text analysis can consume roughly 30,000-60,000 context tokens per paper. When neither reliable PDF text nor same-paper HTML full text is available, the skill reports `needs_ocr`, `pdf_unavailable`, or `extraction_failed`. See the [summarization reference](save-papers-to-zotero/references/summarization.md).
 
 ### A resumable batch
 
@@ -205,6 +218,8 @@ Priority is optional and must be explicit: `high`, `medium`, or `low` maps to `#
 | Resumable batches | Imports run serially with a ledger and lock; completed entries can be skipped safely |
 | Access boundaries | The workflow does not defeat paywalls, CAPTCHAs, authentication, or other access controls |
 | Session privacy | Browser-assisted retrieval must not export cookies or session storage |
+| Safe summary notes | Model output is strict JSON; a standard-library renderer escapes untrusted text and emits fixed HTML |
+| Non-blocking enrichment | Summary or note-verification failures do not change a verified `saved_with_pdf` result |
 
 ## Result statuses
 
@@ -220,6 +235,8 @@ Priority is optional and must be explicit: `high`, `medium`, or `low` maps to `#
 
 Every script emits structured JSON so a caller can distinguish success, skips, preflight failures, and uncertain post-write states.
 
+Optional summary preparation also reports `pdf_unavailable`, `needs_ocr`, `extraction_failed`, or `summary_failed`. The separate note check reports `note_verified` or `note_verification_failed`; these are enrichment results, not replacements for the importer statuses above.
+
 ## Troubleshooting
 
 | Symptom or code | What to check |
@@ -232,15 +249,17 @@ Every script emits structured JSON so a caller can distinguish success, skips, p
 | `verification_failed` | The item may already have been created; inspect Zotero instead of blindly retrying |
 | Claude browser is unavailable | Launch with `claude --chrome`, then check `/chrome`; authenticated browser retrieval requires a direct Anthropic plan |
 | Browser download failed | Download the legitimately accessible PDF yourself and provide its local path; the skill does not switch to an untrusted mirror |
+| `needs_ocr` | The PDF appears to be scanned; this MVP still imports it but does not bundle or install OCR |
+| `note_verification_failed` | The PDF import succeeded, but the generated reading-guide child note could not be confirmed |
 
 ## Compatibility and tests
 
-The test suite uses a fake Zotero server and covers metadata, attachments, verification, duplicates, resumable batch behavior, and dual-platform packaging. GitHub Actions runs it on Python 3.10 and 3.12 across Windows, Linux, and macOS, and validates the Claude marketplace with Claude Code 2.1.211.
+The test suite uses a fake Zotero server and covers metadata, attachments, verification, safe summary rendering, optional note verification, duplicates, resumable batch behavior, and dual-platform packaging. GitHub Actions runs it on Python 3.10 and 3.12 across Windows, Linux, and macOS, and validates the Claude marketplace with Claude Code 2.1.211. Summary quality, scanned-PDF detection, and host PDF capability are agent-level checks rather than deterministic CI tests.
 
 The current release was also exercised against Zotero 9.0.6 and Connector API v3 on July 18, 2026.
 
 ```powershell
-python -X utf8 -m unittest discover -s tests -v
+python -m unittest discover -s tests -v
 ```
 
 ## Repository layout
@@ -254,10 +273,12 @@ save-papers-to-zotero/
 │   ├── agents/openai.yaml
 │   ├── references/batch-manifest.md
 │   ├── references/ingest.md
+│   ├── references/summarization.md
 │   └── scripts/
 ├── tests/
 │   ├── test_importers.py
 │   ├── test_ingest.py
+│   ├── test_summary_note.py
 │   └── test_skill_packaging.py
 ├── README.md
 ├── README.zh-CN.md

@@ -1,6 +1,6 @@
 ---
 name: save-papers-to-zotero
-description: Import one paper or a batch into an exact Zotero collection through the local Connector server, with complete metadata, arXiv Comments child notes, Ethereal Style workflow tags, verified stored PDFs, possible-duplicate reporting, and resumable ledgers; use only when the user explicitly asks to save, import, repair, or verify papers in Zotero.
+description: Import one paper or a batch into an exact Zotero collection through the local Connector server, with complete metadata, optional Chinese full-text summary notes, arXiv Comments, Ethereal Style workflow tags, verified stored PDFs, possible-duplicate reporting, and resumable ledgers; use only when the user explicitly asks to save, import, repair, summarize while importing, or verify papers in Zotero.
 ---
 
 # Save Papers to Zotero
@@ -17,6 +17,7 @@ Resolve the directory containing this `SKILL.md` before running an importer. In 
 - Use `<skill-dir>/scripts/zotero_batch_import.py` for two or more papers, a prepared manifest, or literature-review output.
 - Use `<skill-dir>/scripts/zotero_ingest.py` when you only have a list of DOIs/arXiv IDs or a `.bib` file. It resolves metadata and writes a manifest you review before importing; see [Ingest from Identifier Lists or BibTeX](#ingest-from-identifier-lists-or-bibtex) and `<skill-dir>/references/ingest.md`.
 - Read `<skill-dir>/references/batch-manifest.md` before preparing a batch manifest.
+- Read `<skill-dir>/references/summarization.md` only when the user explicitly requests AI summaries or Chinese reading guides during import.
 
 Both importers:
 
@@ -70,12 +71,20 @@ If the browser integration is unavailable, permission is denied, or the download
 
 Do not bypass paywalls, CAPTCHAs, access controls, or licensing restrictions.
 
+## Generate Optional Chinese Summaries
+
+Do not generate a summary unless the user explicitly requests it. Summary generation uses the current agent's context and can consume roughly 30,000-60,000 tokens per full paper. Recommend 1-5 papers per turn and never summarize more than 10; ask the user to split larger requests before any Zotero write.
+
+Follow `<skill-dir>/references/summarization.md` exactly. Before reading any PDF, run the intended importer with `--dry-run`. For batches, do not summarize `skipped_completed` or `skipped_duplicate_in_manifest` entries. Obtain a local PDF and analyze its full text with the host's PDF capability; if PDF rendering or extraction is unavailable, use a confirmed full-text HTML edition of the same paper as specified in the reference. Render the model's strict JSON through `<skill-dir>/scripts/zotero_summary_note.py`, attach the resulting safe HTML through the existing `notes` field, and pass the same local PDF to the real importer with `--pdf-file`.
+
+Treat summarization as best-effort enrichment. `pdf_unavailable`, `needs_ocr`, `extraction_failed`, `summary_failed`, and `note_verification_failed` do not block an otherwise valid PDF import. Never use the abstract as a silent full-text fallback, install OCR for this MVP, use PDF page numbers for focus locations, or insert model-authored HTML directly. After a successful summary-bearing import, run the helper's separate `verify` command against the new `item_key`; never add note queries to the importer's default verification path.
+
 ## Import One Paper
 
 For a public PDF URL:
 
 ```text
-python -X utf8 "<skill-dir>/scripts/zotero_connector_import.py" \
+python "<skill-dir>/scripts/zotero_connector_import.py" \
   --item-json <item.json> \
   --collection <exact collection name> \
   --source-url <landing page URL> \
@@ -92,7 +101,7 @@ Use `--arxiv-comment <text>` for the source's arXiv `Comments` value; the import
 Prepare and validate every manifest entry before starting writes. Then run:
 
 ```text
-python -X utf8 "<skill-dir>/scripts/zotero_batch_import.py" \
+python "<skill-dir>/scripts/zotero_batch_import.py" \
   --manifest <papers.json> \
   --collection <exact collection name> \
   --target-id <id> \
@@ -113,7 +122,7 @@ Batch exit codes are `0` when all requests completed or were safely skipped, `3`
 When you have only a list of DOIs / arXiv IDs or a `.bib` file, resolve them into a manifest first with `<skill-dir>/scripts/zotero_ingest.py`. It fetches metadata from Crossref (DOIs) and the arXiv API (arXiv ids), or parses BibTeX locally, and writes a manifest that `zotero_batch_import.py` consumes. It does not contact Zotero. Read `<skill-dir>/references/ingest.md` for the supported formats, field mappings, and `needs_pdf` handling before using it.
 
 ```text
-python -X utf8 "<skill-dir>/scripts/zotero_ingest.py" \
+python "<skill-dir>/scripts/zotero_ingest.py" \
   --identifiers <ids.txt|-> \
   --collection "<exact collection name>" \
   [--out <manifest.json>] [--report <ingest-report.json>] \
@@ -139,6 +148,8 @@ Treat importer JSON as authoritative:
 `possible_duplicate_count` and `possible_duplicate_keys` are informational. They refer only to items that existed before this request; the importer still writes and verifies a new parent. Present them for manual review and never remove any item without an explicit user decision.
 
 When supplied, `arxiv_comment` reports the normalized child-note text. `workflow_tags` reports the applied default or explicit `#status/...` tag and any requested `#priority/...` tag. Include these in the completion report so the user can verify the workflow metadata without opening every item.
+
+For an explicitly requested summary, separately report `note_verified`, `pdf_unavailable`, `needs_ocr`, `extraction_failed`, `summary_failed`, or `note_verification_failed`. A summary-specific failure never changes a verified `saved_with_pdf` result. Resume-skipped items are not modified and receive no new summary in this MVP.
 
 ## Report the Batch
 

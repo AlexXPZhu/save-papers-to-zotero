@@ -34,6 +34,8 @@ Do not specify both `item` and `item_json`, or both `pdf_url` and `pdf_file`. A 
 
 Copy `arxiv_comment` only from the source's arXiv `Comments` field. Do not include the `Comment:` prefix unless it is already present; the importer normalizes it to exactly one prefix. Do not place AI-generated summaries or reading notes in this field—use `notes` for those.
 
+When the user explicitly requests a Chinese full-text guide, follow [summarization.md](summarization.md) to render safe note HTML before adding it to the per-paper `notes` array.
+
 Workflow fields create ordinary Zotero tags in the `#status/...` and `#priority/...` forms recognized by the Ethereal Style plugin; they do not require a special Zotero field or tag type. An omitted status defaults to `#status/to-read`; `reading` maps to `#status/reading`; `none` opts out. An explicit `#status/...` already present in the item or requested tags takes precedence over the default. `high`, `medium`, and `low` map to `#priority/...`, but priority has no default and must never be inferred from paper content. Per-paper values override shared values.
 
 The importer allows matches already present in the Zotero library: it creates a new parent and reports the pre-existing keys in `possible_duplicate_keys` for manual review. It still skips a repeated request inside the same manifest and, by default, skips requests already completed in the same ledger. It never deletes, merges, replaces, or suppresses library items automatically.
