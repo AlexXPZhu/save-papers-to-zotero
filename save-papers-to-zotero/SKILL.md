@@ -9,7 +9,7 @@ Complete explicit Zotero import requests through the desktop app's local Connect
 
 ## Resolve Bundled Paths
 
-Resolve the directory containing this `SKILL.md` before running an importer. In Claude Code, use `${CLAUDE_SKILL_DIR}`. In Codex, use the installed skill directory supplied with the loaded skill. Replace `<skill-dir>` below with that absolute directory, quote the resulting script path, and never assume that the current working directory is the skill directory. Use an available Python 3.10+ executable; the examples use `python`.
+Resolve the directory containing this `SKILL.md` before running an importer. In Claude Code, use `${CLAUDE_SKILL_DIR}`. In Codex, use the installed skill directory supplied with the loaded skill. Replace `<skill-dir>` below with that absolute directory, quote the resulting script path, and never assume that the current working directory is the skill directory. Use Python 3.10 or newer. Resolve the launcher once: prefer `py -3` on Windows when available, otherwise `python3`, then `python`; substitute that command for `<python>` below.
 
 ## Choose the Importer
 
@@ -26,8 +26,8 @@ Both importers:
 3. report those matches but still create the requested new item;
 4. save translator-style metadata and optional child notes, including arXiv `Comments`;
 5. assign the requested collection, ordinary tags, default `#status/to-read`, and optional priority tags;
-6. upload PDF bytes as a stored child attachment; and
-7. verify that the newly created parent—not a pre-existing match—is in the collection with a stored PDF.
+6. stream PDF bytes as a stored child attachment; and
+7. verify that the newly created parent—not a pre-existing match—is in the collection and that the stored PDF's size and SHA-256 match the source.
 
 Never automatically delete, merge, replace, or suppress an item because a possible match exists. Return `possible_duplicate_count` and `possible_duplicate_keys` so the user can inspect Zotero and decide what to remove.
 
@@ -62,10 +62,11 @@ Use a Zotero translator-style item object:
 }
 ```
 
-Obtain each PDF in one of two ways:
+Obtain each PDF in one of these ways:
 
 - Pass a public direct PDF URL and its landing page as the referrer.
 - For a PDF available only in the user's signed-in Chrome session, use the host's browser integration: use the Chrome-control skill in Codex, or Claude in Chrome from a Claude Code session launched with `claude --chrome` (or with Chrome enabled by default). Download the visible legitimate PDF to a temporary file, then pass that file with `--pdf-file`. Never inspect, export, or persist cookies or session storage.
+- For a batch with more than one legitimate candidate, put them in ordered `pdf_sources`. The importer exhausts the configured retries for one source before trying the next, and records every attempted source.
 
 If the browser integration is unavailable, permission is denied, or the download does not produce a local valid PDF, stop before the Zotero write and ask the user to provide a legitimately obtained local PDF. Do not fall back to an untrusted mirror.
 
@@ -84,7 +85,7 @@ Treat summarization as best-effort enrichment. `pdf_unavailable`, `needs_ocr`, `
 For a public PDF URL:
 
 ```text
-python "<skill-dir>/scripts/zotero_connector_import.py" \
+<python> "<skill-dir>/scripts/zotero_connector_import.py" \
   --item-json <item.json> \
   --collection <exact collection name> \
   --source-url <landing page URL> \
@@ -94,24 +95,29 @@ python "<skill-dir>/scripts/zotero_connector_import.py" \
 
 For a downloaded PDF, replace `--pdf-url` with `--pdf-file <path>`. Use `--pdf-source-url <URL>` with either `--pdf-file` or `--pdf-url` when the attachment's recorded source should differ from the download URL.
 
-Use `--arxiv-comment <text>` for the source's arXiv `Comments` value; the importer adds `Comment: ` exactly once. Repeat `--note` for other child notes and `--tag` for ordinary tags. Reading status defaults to `to-read`; use `--reading-status reading` to override or `--reading-status none` to opt out. Use `--priority high|medium|low` only when explicitly requested or mapped from user-provided tiers. Add `--target-id <id>` only when multiple writable Connector targets have the exact requested name. Use `--dry-run` for connectivity, collection, input, and possible-duplicate checks without writing.
+Use `--arxiv-comment <text>` for the source's arXiv `Comments` value; the importer adds `Comment: ` exactly once. Repeat `--note` for other child notes and `--tag` for ordinary tags. Reading status defaults to `to-read`; use `--reading-status reading` to override or `--reading-status none` to opt out. Use `--priority high|medium|low` only when explicitly requested or mapped from user-provided tiers. Add `--target-id <id>` only when multiple writable Connector targets have the exact requested name. `--dry-run` is an optional diagnostic, not a required precondition for a normal import. The separate high-cost summarization workflow is the exception: it requires a dry run before consuming model tokens.
 
 ## Import a Batch
 
-Prepare and validate every manifest entry before starting writes. Then run:
+Prepare a manifest, then run:
 
 ```text
-python "<skill-dir>/scripts/zotero_batch_import.py" \
+<python> "<skill-dir>/scripts/zotero_batch_import.py" \
   --manifest <papers.json> \
   --collection <exact collection name> \
   --target-id <id> \
   --ledger <results.jsonl> \
-  --summary-json <summary.json>
+  --summary-json <summary.json> \
+  --safety-level balanced
 ```
 
 Omit the example's `--target-id` line unless same-named Connector targets are ambiguous. Every manifest entry defaults to `#status/to-read`; use shared or per-paper `reading_status` only to select `reading` or `none`. Set shared and per-paper `tags`, `notes`, and `priority` in the manifest; set each paper's `arxiv_comment` from its own arXiv source. The batch CLI intentionally has no `--tag` or `--note` options. Add `--stop-on-error` when no later paper should be attempted after the first incomplete entry.
 
-The batch importer must remain serial. It revalidates the exact target immediately before every write, appends and flushes one ledger record after every paper, continues after paper-specific failures by default, and stops on Zotero connectivity or collection failures. Resume is enabled by default: rerunning the same manifest and ledger skips prior `saved_with_pdf` records. Use `--no-resume` only when the user explicitly wants prior completed requests written again.
+The batch importer must remain serial. It appends and flushes one ledger record after every paper, continues after paper-specific and per-entry manifest failures by default, and stops after exhausted Zotero connectivity retries or a collection failure. PDF downloads default to three attempts with exponential backoff and jitter; source failures remain paper-specific and may fall back to the next `pdf_sources` entry. Progress events go to stderr while stdout remains one final JSON document.
+
+Safety defaults to `balanced`: resolve the full collection once per batch, lightly confirm the target once before the first write, and verify every result. Use `fast` only when the user accepts one initial preflight with no extra prewrite confirmation. Use `strict` when the collection may change during the run; it repeats the full target and collection checks for every paper. Do not run a dry run merely to compensate for normal uncertainty—the default balanced path is designed for direct execution.
+
+Resume is enabled by default. It is scoped to the same base URL, collection, and requested target ID; unscoped legacy records and records from another collection are not trusted for skipping. Repeated resumes retain the original `saved_with_pdf` evidence. If a prior write saved metadata but verification did not finish, resume returns `skipped_needs_review` instead of creating a possible duplicate. Use `--no-resume` only when the user explicitly accepts another write.
 
 Never parallelize writes or run two processes against the same ledger. The importer uses an operating-system advisory lock. Its `.lock` file may remain on disk after a run or crash; the file alone does not block a future batch.
 
@@ -122,7 +128,7 @@ Batch exit codes are `0` when all requests completed or were safely skipped, `3`
 When you have only a list of DOIs / arXiv IDs or a `.bib` file, resolve them into a manifest first with `<skill-dir>/scripts/zotero_ingest.py`. It fetches metadata from Crossref (DOIs) and the arXiv API (arXiv ids), or parses BibTeX locally, and writes a manifest that `zotero_batch_import.py` consumes. It does not contact Zotero. Read `<skill-dir>/references/ingest.md` for the supported formats, field mappings, and `needs_pdf` handling before using it.
 
 ```text
-python "<skill-dir>/scripts/zotero_ingest.py" \
+<python> "<skill-dir>/scripts/zotero_ingest.py" \
   --identifiers <ids.txt|-> \
   --collection "<exact collection name>" \
   [--out <manifest.json>] [--report <ingest-report.json>] \
@@ -132,7 +138,7 @@ python "<skill-dir>/scripts/zotero_ingest.py" \
 
 Use `--bibtex <refs.bib>` instead of `--identifiers` for a BibTeX file. `--tag`, `--note`, `--reading-status`, and `--priority` set shared manifest top-level fields; they are not baked into each paper. The resolver reports every identifier it could not resolve and continues; it never drops failures silently. arXiv entries get a derivable `pdf_url`; DOI entries do not, so the summary reports `needs_pdf`.
 
-A mixed manifest where some entries lack a PDF **cannot be imported as-is**: the batch importer requires a PDF for every entry during a real import and raises `invalid_manifest` on the first entry missing one. Review the manifest, run `zotero_batch_import.py --dry-run` to check metadata and duplicates, then either add PDFs for every `needs_pdf` entry (legitimate access only) or trim the manifest to a subset where every entry has a PDF (for example, a pure arXiv manifest) before the real import. `--dry-run` checks metadata and duplicates but does not solve missing PDFs.
+A real import requires a PDF for each entry. In a mixed manifest, entries without a PDF are recorded as `invalid_manifest_entry` while valid entries continue. Prefer adding legitimate `pdf_file`, `pdf_url`, or ordered `pdf_sources` values before import; trimming the manifest is optional. A dry run can check metadata and duplicates but does not supply missing PDFs.
 
 ## Interpret Results
 
@@ -140,8 +146,10 @@ Treat importer JSON as authoritative:
 
 - `saved_with_pdf`: new parent and stored PDF verified.
 - `skipped_completed`: prior successful ledger record retained during resume.
+- `skipped_needs_review`: a prior write may have saved metadata, so automatic retry was suppressed to avoid a duplicate.
 - `skipped_duplicate_in_manifest`: repeated manifest entry skipped without a second write.
-- `invalid_pdf`, `http_error`, or another paper-specific status: continue the batch and report the source and reason.
+- `invalid_manifest_entry`: this entry is malformed; other valid entries continue unless `--stop-on-error` is set.
+- `invalid_pdf`, `pdf_http_error`, `pdf_sources_exhausted`, or another paper-specific status: continue the batch and report the source and reason.
 - `verification_failed`: metadata may have been saved, but the newly created item or its stored PDF could not be verified; do not rerun blindly.
 - `not_attempted`: a fatal batch-level failure stopped later entries.
 
@@ -153,7 +161,7 @@ For an explicitly requested summary, separately report `note_verified`, `pdf_una
 
 ## Report the Batch
 
-Report:
+Use `task_results` and `counts` for the effective whole-task result across resumes; use `results` and `this_run_counts` only to explain the latest invocation. Report:
 
 - total requested;
 - newly saved with verified PDFs;

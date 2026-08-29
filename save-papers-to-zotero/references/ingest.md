@@ -94,11 +94,11 @@ The optional `--report` file records every resolved entry and every `unresolved`
 
 ## Working with `needs_pdf`
 
-The batch importer requires a PDF for every entry during a real import (it raises `invalid_manifest` on the first entry lacking both `pdf_file` and `pdf_url`). A mixed manifest where some entries have a PDF (arXiv) and some do not (DOIs) therefore **cannot be imported as-is**. Pick one:
+The batch importer requires a PDF for each entry during a real import. An entry lacking `pdf_file`, `pdf_url`, or `pdf_sources` is recorded as `invalid_manifest_entry`; other valid entries continue. For the cleanest unattended run:
 
 1. Review the manifest, then run `zotero_batch_import.py --dry-run` to check metadata and possible duplicates without writing.
-2. For every `needs_pdf` entry, add a PDF: download one through the agent's browser integration (legitimate access only) and set `pdf_file`, or point `pdf_url` at a public direct PDF.
-3. Alternatively, trim the manifest to a subset where every entry has a PDF (for example, a pure arXiv manifest) and import that first; import the rest after their PDFs are supplied.
+2. For every `needs_pdf` entry, add a PDF: download one through the agent's browser integration (legitimate access only) and set `pdf_file`, point `pdf_url` at a public direct PDF, or supply ordered `pdf_sources` fallbacks.
+3. Alternatively, import as-is and inspect the per-entry failures, or trim to a subset where every entry has a PDF.
 
 `--dry-run` checks metadata and duplicates but does not solve missing PDFs.
 
