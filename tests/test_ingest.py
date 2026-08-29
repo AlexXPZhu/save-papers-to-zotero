@@ -522,7 +522,7 @@ class IngestFlowTests(unittest.TestCase):
             self.assertEqual(result["results"][0]["status"], "saved_with_pdf")
             self.assertEqual(len(fake.state.parents), 1)
 
-    def test_ingest_mixed_manifest_reports_needs_pdf_and_rejects_real_import(self):
+    def test_ingest_mixed_manifest_reports_needs_pdf_as_isolated_entry_error(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
             ids = root / "ids.txt"
@@ -542,9 +542,11 @@ class IngestFlowTests(unittest.TestCase):
                 )
             self.assertEqual(summary["with_pdf"], 1)
             self.assertEqual(summary["needs_pdf"], 1)
-            with self.assertRaises(single.ImportFailure) as raised:
-                batch.parse_manifest(out, None, None, require_pdf=True)
-            self.assertEqual(raised.exception.status, "invalid_manifest")
+            _, _, requests = batch.parse_manifest(out, None, None, require_pdf=True)
+            self.assertIsNone(requests[0].parse_error)
+            self.assertIsNotNone(requests[1].parse_error)
+            self.assertEqual(requests[1].parse_error.status, "invalid_manifest")
+            self.assertIn("requires exactly one", requests[1].parse_error.message)
 
     def test_ingest_all_unresolved_returns_nonzero_and_no_manifest(self):
         with tempfile.TemporaryDirectory() as temp:

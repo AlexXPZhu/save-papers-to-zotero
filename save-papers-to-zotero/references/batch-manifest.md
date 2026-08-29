@@ -20,7 +20,7 @@ Each paper entry supports:
 - `item`: inline Zotero translator-style item object.
 - `item_json`: path to one translator-style item JSON file, relative to the manifest.
 - `source_url`: canonical landing page.
-- exactly one of `pdf_url` or `pdf_file` for a real import;
+- exactly one legacy `pdf_url` or `pdf_file`, or one non-empty ordered `pdf_sources` array, for a real import;
 - `pdf_source_url`: attachment source URL recorded for either a local `pdf_file` or downloaded `pdf_url`;
 - `pdf_title`: attachment title, default `PDF`;
 - `referrer`: landing page used when downloading `pdf_url`;
@@ -31,6 +31,8 @@ Each paper entry supports:
 - `priority`: optional per-paper override of the shared priority.
 
 Do not specify both `item` and `item_json`, or both `pdf_url` and `pdf_file`. A dry run may omit both PDF fields.
+
+Each object in `pdf_sources` requires exactly one `pdf_url` or `pdf_file` and may override `pdf_source_url`, `pdf_title`, and `referrer`. Sources are tried in array order before any Zotero metadata write. A source uses its normal retry budget before the next source is attempted, while the per-paper wall timeout covers the entire source list. Unknown paper and source keys are rejected as `invalid_manifest_entry` so misspellings are not ignored.
 
 Copy `arxiv_comment` only from the source's arXiv `Comments` field. Do not include the `Comment:` prefix unless it is already present; the importer normalizes it to exactly one prefix. Do not place AI-generated summaries or reading notes in this field—use `notes` for those.
 
@@ -60,8 +62,17 @@ The importer allows matches already present in the Zotero library: it creates a 
         "archiveID": "arXiv:2601.00001"
       },
       "source_url": "https://arxiv.org/abs/2601.00001",
-      "pdf_url": "https://arxiv.org/pdf/2601.00001",
-      "referrer": "https://arxiv.org/abs/2601.00001",
+      "pdf_sources": [
+        {
+          "pdf_url": "https://publisher.example/paper-one.pdf",
+          "referrer": "https://publisher.example/paper-one"
+        },
+        {
+          "pdf_url": "https://arxiv.org/pdf/2601.00001",
+          "referrer": "https://arxiv.org/abs/2601.00001",
+          "pdf_title": "arXiv PDF"
+        }
+      ],
       "arxiv_comment": "Accepted at ExampleConf 2026. Code: https://github.com/example/project",
       "notes": ["<p>Imported from the literature review.</p>"]
     },
@@ -77,8 +88,8 @@ The importer allows matches already present in the Zotero library: it creates a 
 
 ## Output files
 
-The ledger is append-only JSONL. Every line contains the run ID, UTC timestamp, manifest index, stable request key, title, source, status, and status-specific details. Keep it for retries and auditing.
+The ledger is append-only JSONL. Every line contains the run ID, UTC timestamp, manifest index, stable request key, title, source, status, resume scope, and status-specific details. Keep it for retries and auditing. Resume trusts prior successes only when base URL, normalized collection, and requested target ID match. Legacy unscoped records are retained for audit but do not cause an automatic skip.
 
 Each successful write includes `possible_duplicate_count` and `possible_duplicate_keys`. These fields report matches that existed before the new item was created; they do not mean the new write was skipped. When supplied, `arxiv_comment` contains the normalized `Comment: ...` child-note text and `workflow_tags` lists the applied Ethereal Style tags.
 
-The optional summary JSON contains aggregate counts, `possible_duplicate_items`, and all records from the current run. A batch exits with code `0` only when every entry is complete or safely skipped; code `3` means the batch finished with incomplete entries; other nonzero codes indicate a manifest, lock, or batch-level failure. Use `--stop-on-error` to mark all later entries `not_attempted` after the first incomplete entry.
+The optional summary JSON is written atomically. `results` and `this_run_counts` describe the current invocation. `task_results` and `counts` reconstruct the effective whole task, retaining original success evidence through repeated resumes. `historical_failure_items` reports earlier failures that later succeeded, while `currently_unresolved` lists outstanding entries. A batch exits with code `0` only when every entry is complete or safely skipped; code `3` means the batch finished with incomplete or needs-review entries; other nonzero codes indicate a manifest, lock, connection, or collection failure. Use `--stop-on-error` to mark all later entries `not_attempted` after the first incomplete entry.
