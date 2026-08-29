@@ -16,7 +16,7 @@ The batch importer requires a translator-style item plus a PDF for every paper. 
 ## CLI
 
 ```text
-python -X utf8 "<skill-dir>/scripts/zotero_ingest.py" \
+python "<skill-dir>/scripts/zotero_ingest.py" \
   (--identifiers <ids.txt|-> | --bibtex <refs.bib>) \
   --collection "<exact collection name>" \
   [--out <manifest.json>] \
@@ -112,7 +112,7 @@ default each paper to to-read, and write an ingest report. Do not write to Zoter
 ```
 
 ```text
-python -X utf8 "<skill-dir>/scripts/zotero_ingest.py" \
+python "<skill-dir>/scripts/zotero_ingest.py" \
   --identifiers ids.txt \
   --collection "Reading Queue" \
   --report ids.ingest-report.json
@@ -121,7 +121,7 @@ python -X utf8 "<skill-dir>/scripts/zotero_ingest.py" \
 Inspect `ids.manifest.json`, then:
 
 ```text
-python -X utf8 "<skill-dir>/scripts/zotero_batch_import.py" \
+python "<skill-dir>/scripts/zotero_batch_import.py" \
   --manifest ids.manifest.json \
   --ledger ids.zotero-results.jsonl
 ```
@@ -129,7 +129,7 @@ python -X utf8 "<skill-dir>/scripts/zotero_batch_import.py" \
 ### A BibTeX file
 
 ```text
-python -X utf8 "<skill-dir>/scripts/zotero_ingest.py" \
+python "<skill-dir>/scripts/zotero_ingest.py" \
   --bibtex refs.bib \
   --collection "Thesis Sources" \
   --tag thesis \

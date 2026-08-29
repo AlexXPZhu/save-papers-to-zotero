@@ -17,9 +17,11 @@ class SkillPackagingTests(unittest.TestCase):
             SKILL_DIR / "agents" / "openai.yaml",
             SKILL_DIR / "references" / "batch-manifest.md",
             SKILL_DIR / "references" / "ingest.md",
+            SKILL_DIR / "references" / "summarization.md",
             SKILL_DIR / "scripts" / "zotero_connector_import.py",
             SKILL_DIR / "scripts" / "zotero_batch_import.py",
             SKILL_DIR / "scripts" / "zotero_ingest.py",
+            SKILL_DIR / "scripts" / "zotero_summary_note.py",
         ]
         for path in required:
             with self.subTest(path=path):
@@ -35,7 +37,28 @@ class SkillPackagingTests(unittest.TestCase):
         self.assertIn("Claude in Chrome", skill)
         self.assertIn("<skill-dir>/scripts/zotero_connector_import.py", skill)
         self.assertIn("<skill-dir>/scripts/zotero_ingest.py", skill)
+        self.assertIn("<skill-dir>/scripts/zotero_summary_note.py", skill)
         self.assertIn("Ingest from Identifier Lists or BibTeX", skill)
+        self.assertIn("Generate Optional Chinese Summaries", skill)
+
+        summary_reference = (SKILL_DIR / "references" / "summarization.md").read_text(
+            encoding="utf-8"
+        )
+        for heading in (
+            "概述",
+            "背景与动机",
+            "解决的核心问题",
+            "方法与架构",
+            "成果与评估",
+            "重点阅读",
+        ):
+            self.assertIn(heading, summary_reference)
+        self.assertIn("needs_ocr", summary_reference)
+        self.assertIn("HTML-escapes", summary_reference)
+        self.assertIn("https://arxiv.org/html/<arXiv-id>", summary_reference)
+        self.assertIn("ASCII 双引号", summary_reference)
+        self.assertIn('"location"', summary_reference)
+        self.assertNotIn('"pages"', summary_reference)
 
     def test_claude_marketplace_exposes_only_the_shared_skill(self) -> None:
         marketplace = json.loads(MARKETPLACE_FILE.read_text(encoding="utf-8"))
@@ -52,7 +75,11 @@ class SkillPackagingTests(unittest.TestCase):
         self.assertFalse((SKILL_DIR / ".claude-plugin" / "plugin.json").exists())
 
     def test_docs_cover_both_installation_paths(self) -> None:
-        for filename in ("README.md", "README.zh-CN.md"):
+        zero_dependency_phrases = {
+            "README.md": "Uses Python's standard library only",
+            "README.zh-CN.md": "仅使用 Python 标准库",
+        }
+        for filename, zero_dependency_phrase in zero_dependency_phrases.items():
             text = (ROOT / filename).read_text(encoding="utf-8")
             with self.subTest(filename=filename):
                 self.assertIn("$skill-installer", text)
@@ -63,6 +90,9 @@ class SkillPackagingTests(unittest.TestCase):
                     "/plugin install save-papers-to-zotero@save-papers-to-zotero",
                     text,
                 )
+                self.assertIn("summarization.md", text)
+                self.assertIn(zero_dependency_phrase, text)
+                self.assertNotIn("-X utf8", text)
                 self.assertIn("claude --plugin-dir ./save-papers-to-zotero --chrome", text)
 
     def test_connector_session_identifier_is_platform_neutral(self) -> None:

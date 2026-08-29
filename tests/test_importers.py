@@ -33,6 +33,8 @@ class FakeZotero:
         self.update_tags: dict[str, list[str]] = {}
         self.next_parent = 1
         self.next_attachment = 1
+        self.next_note = 1
+        self.note_children_queries = 0
         self.targets = [{"id": "C1", "name": "Route A", "filesEditable": True}]
         self.collections = [{"key": "COLL1", "data": {"key": "COLL1", "name": "Route A"}}]
         self.rename_target_after_attachments: int | None = None
@@ -66,6 +68,22 @@ class FakeZotero:
                     "contentType": "application/pdf",
                 },
                 "file_uri": path.resolve().as_uri(),
+            }
+        )
+        return key
+
+    def _add_note(self, parent_key: str, note: str) -> str:
+        key = f"NOTE{self.next_note:04d}"
+        self.next_note += 1
+        self.children.setdefault(parent_key, []).append(
+            {
+                "key": key,
+                "data": {
+                    "key": key,
+                    "itemType": "note",
+                    "parentItem": parent_key,
+                    "note": note,
+                },
             }
         )
         return key
@@ -105,6 +123,9 @@ class FakeZotero:
                     item.update({"key": key, "collections": []})
                     state.parents.append(item)
                     state.children[key] = []
+                    for note in item.get("notes", []):
+                        if isinstance(note, dict) and isinstance(note.get("note"), str):
+                            state._add_note(key, note["note"])
                     state.sessions[payload["sessionID"]] = {
                         "key": key,
                         "connector_item_id": item["id"],
@@ -190,9 +211,13 @@ class FakeZotero:
                     return
                 if len(parts) == 6 and parts[:4] == ["api", "users", "0", "items"] and parts[5] == "children":
                     parent_key = parts[4]
+                    item_type = urllib.parse.parse_qs(parsed.query).get("itemType", [None])[0]
+                    if item_type == "note":
+                        state.note_children_queries += 1
                     public_children = [
                         {"key": child["key"], "data": child["data"]}
                         for child in state.children.get(parent_key, [])
+                        if item_type is None or child["data"].get("itemType") == item_type
                     ]
                     self.send_json(200, public_children)
                     return
@@ -269,6 +294,7 @@ class SingleImporterTests(unittest.TestCase):
                 )
                 self.assertEqual(result["status"], "saved_with_pdf")
                 self.assertTrue(result["pdf_verified"])
+                self.assertEqual(fake.state.note_children_queries, 0)
                 self.assertEqual(result["possible_duplicate_count"], 0)
                 self.assertEqual(
                     result["arxiv_comment"],

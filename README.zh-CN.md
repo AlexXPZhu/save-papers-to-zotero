@@ -41,6 +41,7 @@
 
 - 将单篇论文或一批论文导入准确的 Zotero 集合。
 - 通过 Crossref 和 arXiv API，将 DOI/arXiv ID 列表或 `.bib` 文件解析为可检阅的清单。
+- 可选地将基于全文、以中文为主的论文导读安全渲染并作为经独立验证的子笔记保存。
 - 保留完整元数据，并将 arXiv Comments 保存为子笔记。
 - 与 Ethereal Style Zotero 插件集成，生成其使用的 `#status/...` 和 `#priority/...` 工作流标签，但不会自行猜测优先级。
 - 同时验证集合归属和本地存储的 PDF。
@@ -61,6 +62,7 @@
 | 本地 API | 在 Zotero 设置中启用 **允许此计算机上的其他应用程序与 Zotero 通信** |
 | Ethereal Style | 推荐配套使用的 Zotero 插件，可将生成的 `#status/...` 和 `#priority/...` 标签用于科研工作流 |
 | PDF 访问权限 | 你必须已经拥有合法的 PDF 访问权限 |
+| 总结能力 | 使用当前智能体的 PDF 阅读能力和上下文；不内置 OCR |
 
 ### 2. 为 Codex 或 Claude Code 安装
 
@@ -127,6 +129,15 @@ Claude Code 可以自动调用该技能，也可以通过 `/save-papers-to-zoter
 将 DOI 10.1145/3290605.3300233 导入准确的 Zotero 集合“HCI”。
 保存并验证 PDF，并使用 reading 工作流标签。
 ```
+
+### 中文全文导读
+
+```text
+将这篇论文导入“待读论文”并验证 PDF。阅读完整正文，并添加一篇以中文为主的子笔记，
+包含概述、背景与动机、解决的核心问题、方法与架构、成果与评估，以及我应该重点阅读的章节和段落位置。
+```
+
+只有用户明确要求时才生成总结。技能会先 dry-run 导入，再使用当前 Codex 或 Claude 会话阅读 PDF，将模型的结构化 JSON 安全渲染，并在导入后单独验证子笔记。若宿主无法渲染 PDF，可使用经确认属于同一论文的 arXiv/ar5iv HTML 全文；不会悄悄降级为仅基于摘要的总结。重点位置使用章节加段落、公式、表格或图片标号，不使用 PDF 页码。总结失败不会阻止有效 PDF 的导入。建议每批 1–5 篇，每个对话轮次硬上限为 10 篇；每篇全文分析可能消耗约 3–6 万个上下文 token。只有 PDF 与同论文 HTML 全文都无法可靠读取时，才报告 `needs_ocr`、`pdf_unavailable` 或 `extraction_failed`。详见[总结参考](save-papers-to-zotero/references/summarization.md)。
 
 ### 可恢复的批量导入
 
@@ -195,6 +206,8 @@ Claude Code 可以自动调用该技能，也可以通过 `/save-papers-to-zoter
 | 可恢复的批量任务 | 使用账本和锁串行导入；已完成的条目可被安全跳过 |
 | 访问边界 | 不会破解付费墙、CAPTCHA、身份验证或其他访问控制 |
 | 会话隐私 | 浏览器辅助获取不得导出 Cookie 或会话存储 |
+| 总结笔记安全 | 模型只输出严格 JSON；标准库渲染器会转义不可信文本并生成固定 HTML |
+| 非阻塞增强 | 总结或 note 验证失败不会改变已验证的 `saved_with_pdf` 结果 |
 
 ## 结果状态
 
@@ -210,6 +223,8 @@ Claude Code 可以自动调用该技能，也可以通过 `/save-papers-to-zoter
 
 所有脚本均输出结构化 JSON，使调用者能够区分成功、跳过、预检失败和写入后状态不确定等情况。
 
+可选总结准备还会报告 `pdf_unavailable`、`needs_ocr`、`extraction_failed` 或 `summary_failed`。独立 note 检查报告 `note_verified` 或 `note_verification_failed`；它们是增强结果，不替代上面的 importer 状态。
+
 ## 故障排查
 
 | 症状或代码 | 检查内容 |
@@ -222,15 +237,17 @@ Claude Code 可以自动调用该技能，也可以通过 `/save-papers-to-zoter
 | `verification_failed` | 条目可能已经创建；不要盲目重试，请先检查 Zotero |
 | Claude 浏览器不可用 | 使用 `claude --chrome` 启动并检查 `/chrome`；登录态浏览器获取要求 Anthropic 直连方案 |
 | 浏览器下载失败 | 自行下载有权访问的 PDF 并提供本地路径；技能不会切换到不可信镜像 |
+| `needs_ocr` | PDF 看起来是扫描件；MVP 仍会导入它，但不会打包或安装 OCR |
+| `note_verification_failed` | PDF 导入成功，但无法确认生成的论文导读子笔记 |
 
 ## 兼容性与测试
 
-测试套件使用模拟 Zotero 服务，覆盖元数据、附件、验证、重复项、可恢复批量行为和双平台打包。GitHub Actions 会在 Windows、Linux 和 macOS 上使用 Python 3.10 与 3.12 运行测试，并使用 Claude Code 2.1.211 校验 Claude marketplace。
+测试套件使用模拟 Zotero 服务，覆盖元数据、附件、验证、安全总结渲染、可选 note 验证、重复项、可恢复批量行为和双平台打包。GitHub Actions 会在 Windows、Linux 和 macOS 上使用 Python 3.10 与 3.12 运行测试，并使用 Claude Code 2.1.211 校验 Claude marketplace。总结质量、扫描件识别和宿主 PDF 能力属于 Agent 级检查，不是确定性 CI 测试。
 
 当前版本也已于 2026 年 7 月 18 日在 Zotero 9.0.6 和 Connector API v3 上完成实际验证。
 
 ```powershell
-python -X utf8 -m unittest discover -s tests -v
+python -m unittest discover -s tests -v
 ```
 
 ## 仓库结构
@@ -244,10 +261,12 @@ save-papers-to-zotero/
 │   ├── agents/openai.yaml
 │   ├── references/batch-manifest.md
 │   ├── references/ingest.md
+│   ├── references/summarization.md
 │   └── scripts/
 ├── tests/
 │   ├── test_importers.py
 │   ├── test_ingest.py
+│   ├── test_summary_note.py
 │   └── test_skill_packaging.py
 ├── README.md
 ├── README.zh-CN.md
